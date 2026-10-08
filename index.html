@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>真人还是 AI？· 图灵测试大挑战</title>
+<style>
+  :root{
+    --cream:#FFF9EF; --ink:#33261A; --orange:#E8703A; --green:#3F7A5A;
+    --yellow:#F4B942; --gray:#8A7A66; --line:#EAD9BE; --soft:#F6EBD8; --red:#C0392B;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--cream); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:680px; margin:0 auto; padding:16px 14px 48px;}
+  .hidden{display:none !important;}
+  h1,h2,h3{margin:0;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+  button:active{transform:scale(0.96); filter:brightness(0.95);}
+
+  /* ===== 通用 ===== */
+  .kicker{color:var(--orange); font-size:13px; letter-spacing:2px; font-weight:700;}
+  .big-btn{
+    display:block; width:100%; padding:16px 18px; margin:10px 0;
+    border-radius:16px; font-size:18px; font-weight:700; color:#fff;
+    background:var(--orange); box-shadow:0 3px 0 #c65a2b;
+    text-align:left; line-height:1.4;
+  }
+  .big-btn .sub{display:block; font-size:13px; font-weight:400; opacity:.92; margin-top:4px;}
+  .big-btn.green{background:var(--green); box-shadow:0 3px 0 #2f5c43;}
+  .big-btn.yellow{background:var(--yellow); box-shadow:0 3px 0 #d19c2e; color:var(--ink);}
+  .big-btn:disabled{opacity:.45; box-shadow:none;}
+  .pill{
+    display:inline-block; padding:4px 12px; border-radius:999px;
+    font-size:13px; font-weight:700; color:#fff; background:var(--green);
+  }
+  .pill.orange{background:var(--orange);}
+  .pill.yellow{background:var(--yellow); color:var(--ink);}
+  .card{
+    background:#fff; border:2px solid var(--line); border-radius:16px; padding:14px 16px;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:14px; opacity:0; transition:opacity .25s; pointer-events:none; z-index:99;
+    max-width:86%; text-align:center;
+  }
+  .toast.show{opacity:1;}
+
+  /* ===== 首页 ===== */
+  .hero{text-align:center; padding:26px 8px 8px;}
+  .hero .emo{font-size:56px; line-height:1;}
+  .hero h1{font-size:30px; margin:12px 0 4px;}
+  .hero .tag{color:var(--gray); font-size:15px; margin-bottom:8px;}
+  .hero .yr{color:var(--green); font-weight:700;}
+  .howto{margin-top:18px; font-size:14px; line-height:1.9; color:var(--ink);}
+  .howto b{color:var(--orange);}
+
+  /* ===== 竞技场 ===== */
+  .hud{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .hud .lvl{font-size:14px; font-weight:700; color:var(--gray);}
+  .panel{border:2px solid var(--line); border-radius:16px; background:#fff; margin-bottom:10px; overflow:hidden;}
+  .panel .ph{
+    display:flex; align-items:center; gap:8px; padding:8px 14px;
+    background:var(--soft); font-weight:700; font-size:15px;
+  }
+  .panel .ph .dot{width:10px; height:10px; border-radius:50%;}
+  .panel-a .ph .dot{background:var(--orange);}
+  .panel-b .ph .dot{background:var(--green);}
+  .panel .msgs{padding:10px 12px; min-height:64px;}
+  .bubble{
+    background:var(--soft); border-radius:12px; padding:8px 12px; margin:6px 0;
+    font-size:14.5px; line-height:1.65; animation:pop .25s ease;
+  }
+  .bubble.q{background:#fff; border:1.5px dashed var(--line); color:var(--gray); font-size:13px;}
+  .bubble.typing{color:var(--gray); letter-spacing:3px;}
+  @keyframes pop{from{transform:scale(.9); opacity:0;} to{transform:scale(1); opacity:1;}}
+  .stamp{
+    display:inline-block; margin-left:8px; padding:2px 8px; border-radius:8px;
+    font-size:12px; font-weight:700; color:#fff; background:var(--red);
+  }
+  .stamp.human{background:var(--green);}
+
+  .qbank{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0;}
+  .qcard{
+    flex:1 1 45%; background:#fff; border:2px solid var(--orange); color:var(--ink);
+    border-radius:12px; padding:10px 12px; font-size:14px; font-weight:700; text-align:left;
+    line-height:1.5;
+  }
+  .qcard.used{opacity:.3; border-color:var(--line); pointer-events:none;}
+  .vote-bar{display:flex; gap:10px; margin-top:6px;}
+  .vote-btn{
+    flex:1; padding:14px; border-radius:14px; font-size:16px; font-weight:700; color:#fff;
+  }
+  .vote-btn.va{background:var(--orange);}
+  .vote-btn.vb{background:var(--green);}
+  .vote-btn:disabled{opacity:.35;}
+  .hint{font-size:13px; color:var(--gray); text-align:center; margin:8px 0 0;}
+
+  /* ===== 覆盖层 ===== */
+  .overlay{
+    position:fixed; inset:0; background:rgba(51,38,26,.55); z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .ov-card{
+    background:var(--cream); border-radius:20px; padding:22px 20px; width:100%; max-width:440px;
+    max-height:86vh; overflow-y:auto; animation:pop .3s ease;
+  }
+  .ov-card h2{font-size:22px; margin-bottom:8px;}
+  .ov-card p{font-size:14.5px; line-height:1.8; margin:8px 0;}
+  .ov-card .tell{
+    background:#fff; border-left:4px solid var(--yellow); border-radius:8px;
+    padding:10px 12px; font-size:14px; line-height:1.7; margin:10px 0;
+  }
+
+  /* ===== 教练模式 ===== */
+  .meter-wrap{background:#fff; border:2px solid var(--line); border-radius:14px; padding:10px 14px; margin-bottom:12px;}
+  .meter-label{display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;}
+  .meter{height:16px; background:var(--soft); border-radius:999px; overflow:hidden;}
+  .meter i{display:block; height:100%; width:30%; background:var(--green); border-radius:999px; transition:width .5s ease, background .5s ease;}
+  .judge-q{
+    background:#fff; border:2px solid var(--green); border-radius:16px 16px 16px 4px;
+    padding:12px 16px; font-size:16px; font-weight:700; margin:10px 0 14px; line-height:1.6;
+  }
+  .judge-q .who{display:block; font-size:12px; color:var(--green); font-weight:700; margin-bottom:4px;}
+  .copt{
+    display:block; width:100%; text-align:left; background:#fff; border:2px solid var(--line);
+    border-radius:14px; padding:12px 14px; margin:8px 0; font-size:15px; line-height:1.6;
+  }
+  .copt .lab{font-weight:700; color:var(--orange); margin-right:6px;}
+  .fb{
+    border-radius:14px; padding:12px 14px; font-size:14.5px; line-height:1.7; margin:10px 0;
+    animation:pop .25s ease;
+  }
+  .fb.good{background:#E9F4EC; border:2px solid var(--green);}
+  .fb.bad{background:#FBE9E4; border:2px solid var(--red);}
+  .fb.ok{background:#FDF3DD; border:2px solid var(--yellow);}
+
+  /* ===== 结算/证书 ===== */
+  .cert{
+    background:#fff; border:3px solid var(--yellow); border-radius:20px;
+    padding:24px 18px; text-align:center; margin:14px 0;
+  }
+  .cert h2{font-size:24px; color:var(--orange); margin-bottom:4px;}
+  .cert .cname{font-size:20px; font-weight:700; margin:12px 0 4px; color:var(--ink);}
+  .cert .csub{font-size:13px; color:var(--gray); line-height:1.8;}
+  .stars{font-size:30px; letter-spacing:6px; margin:8px 0;}
+  .badges{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0;}
+  .badge{
+    background:var(--soft); border:2px solid var(--yellow); border-radius:14px;
+    padding:8px 12px; font-size:14px; font-weight:700;
+  }
+  .badge .be{display:block; font-size:24px;}
+  .review{text-align:left; font-size:14px; line-height:1.9;}
+  .review li{margin:6px 0;}
+  .name-row{display:flex; gap:8px; margin:12px 0;}
+  .name-row input{
+    flex:1; border:2px solid var(--line); border-radius:12px; padding:12px 14px;
+    font-size:16px; font-family:inherit; background:#fff; color:var(--ink);
+  }
+  .footer-note{text-align:center; color:var(--gray); font-size:12px; margin-top:18px; line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== 首页 ========== -->
+  <div id="scr-home">
+    <div class="hero">
+      <div class="emo">🕵️🤖</div>
+      <div class="kicker">AI 十哲 · 第一课</div>
+      <h1>真人还是 AI？</h1>
+      <div class="tag">图灵测试大挑战 · 一场玩了 <span class="yr">76</span> 年的猜谜游戏</div>
+    </div>
+    <button class="big-btn" id="btn-judge">🕵️ 裁判模式：揪出假扮人的 AI
+      <span class="sub">向两个神秘窗口提问，三关之后投票——AI 一关比一关会装！</span>
+    </button>
+    <button class="big-btn green" id="btn-coach">🎓 教练模式：帮机器人骗过裁判
+      <span class="sub">机器人小豆要参加图灵测试，每道题你替它挑回答，别让裁判起疑心！</span>
+    </button>
+    <div class="card howto">
+      <b>怎么玩？</b><br>
+      1950 年，天才图灵出了个主意：不看长相、不听声音，只靠打字聊天——如果你分不清对面是人是机器，这台机器就算「会思考」。<br>
+      现在轮到你了：先当<b>裁判</b>抓 AI，再当<b>教练</b>教 AI 装人。玩完你就懂什么叫「图灵测试」！
+    </div>
+    <div class="footer-note">【和孩子一起学AI】社群亲子课配套游戏<br>无需联网 · 双击即玩</div>
+  </div>
+
+  <!-- ========== 裁判模式 ========== -->
+  <div id="scr-judge" class="hidden">
+    <div class="hud">
+      <span class="lvl" id="j-lvl">第 1 关</span>
+      <span class="pill" id="j-progress">已问 0 / 3 题</span>
+    </div>
+    <div class="panel panel-a">
+      <div class="ph"><span class="dot"></span>窗口 A <span id="stamp-a"></span></div>
+      <div class="msgs" id="msgs-a"></div>
+    </div>
+    <div class="panel panel-b">
+      <div class="ph"><span class="dot"></span>窗口 B <span id="stamp-b"></span></div>
+      <div class="msgs" id="msgs-b"></div>
+    </div>
+    <div class="hint">👇 点一张问题卡，A 和 B 会分别回答（每个问题只能问一次）</div>
+    <div class="qbank" id="qbank"></div>
+    <div class="vote-bar">
+      <button class="vote-btn va" id="vote-a" disabled>A 是 AI！</button>
+      <button class="vote-btn vb" id="vote-b" disabled>B 是 AI！</button>
+    </div>
+    <div class="hint" id="vote-hint">问满 3 个问题后，就可以投票啦</div>
+  </div>
+
+  <!-- ========== 教练模式 ========== -->
+  <div id="scr-coach" class="hidden">
+    <div class="hud">
+      <span class="lvl" id="c-lvl">第 1 题 / 共 5 题</span>
+      <span class="pill orange">教练模式</span>
+    </div>
+    <div class="meter-wrap">
+      <div class="meter-label"><span>🕵️ 裁判的怀疑值</span><span id="meter-num">30</span></div>
+      <div class="meter"><i id="meter-bar"></i></div>
+    </div>
+    <div class="judge-q"><span class="who">裁判提问：</span><span id="c-q"></span></div>
+    <div class="hint">👇 替小豆挑一个回答——太老实和太完美都会被怀疑！</div>
+    <div id="c-opts"></div>
+    <div id="c-fb"></div>
+    <button class="big-btn yellow hidden" id="c-next">下一题 ➜</button>
+  </div>
+
+  <!-- ========== 结算 ========== -->
+  <div id="scr-result" class="hidden">
+    <div class="hero">
+      <div class="emo">🏆</div>
+      <div class="kicker">闯关完成</div>
+      <h1>图灵裁判证书</h1>
+    </div>
+    <div class="name-row">
+      <input id="cert-name" maxlength="12" placeholder="写上你的名字">
+      <button class="big-btn yellow" id="cert-go" style="width:auto; margin:0; padding:12px 18px; font-size:15px;">盖章</button>
+    </div>
+    <div class="cert">
+      <h2>🎖️ 图灵测试结业证书</h2>
+      <div class="csub">兹证明</div>
+      <div class="cname" id="cert-who">＿＿＿＿同学</div>
+      <div class="stars" id="cert-stars">☆☆☆</div>
+      <div class="csub" id="cert-desc">已完成「真人还是 AI？」全部挑战<br>理解了什么是图灵测试</div>
+      <div class="badges" id="cert-badges"></div>
+      <div class="csub" id="cert-date"></div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--orange); margin-bottom:6px;">📒 复盘：什么问题最能照出 AI？</h3>
+      <ul class="review" style="padding-left:20px; margin:8px 0;">
+        <li><b>问「私人的小事」</b>：早饭吃了啥、小时候闯过什么祸——AI 没有真正的生活，只能编一个「标准答案」。</li>
+        <li><b>问「情绪」</b>：心情怎么样、最怕什么——AI 说情绪时总像作文，不像真话。</li>
+        <li><b>看它「会不会犯错」</b>：真人会打错字、会犹豫、会改口；太完美的回答反而可疑。</li>
+        <li><b>图灵爷爷的启示</b>：分不清，不代表机器有了人的心——它也可能只是装得太像了。这个争论到今天还在继续！</li>
+      </ul>
+    </div>
+    <button class="big-btn" id="btn-again">🔁 再玩一次（AI 会换个窗口藏）</button>
+    <button class="big-btn green" id="btn-home">🏠 回首页换个模式</button>
+    <div class="footer-note">下一课预告：1958 年 · 感知机——AI 第一次学会「从错误中学习」</div>
+  </div>
+
+</div>
+
+<!-- 覆盖层：关卡开场 / 揭晓 -->
+<div class="overlay hidden" id="overlay">
+  <div class="ov-card" id="ov-card"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+ * 数据：裁判模式三关（AI 一关比一关会装）
+ * h = 真人回答  a = AI 回答
+ * ============================================================ */
+var JLEVELS = [
+  {
+    name:'第 1 关 · 铁皮机器人',
+    intro:'这个 AI 刚出厂，还不太会装人。擦亮眼睛，它很容易露出马脚！',
+    tell:'🔍 破绽分析：它太诚实、太格式化了——张口就是「功能」「数据」「评分」，真人聊天才不这样说话。',
+    qs:[
+      {q:'你今天早饭吃了什么？',
+       h:'吃了我妈做的煎饺，有点糊了但还是很好吃哈哈',
+       a:'我不需要进食。我的能量来源是电力，当前电量 97%。'},
+      {q:'你最喜欢的动画片是什么？',
+       h:'疯狂动物城！我看了三遍，每次都被闪电笑死',
+       a:'根据数据分析，《疯狂动物城》豆瓣评分 9.2，是一部优秀的动画作品。'},
+      {q:'考试没考好，你会怎么办？',
+       h:'先难过一晚上，然后偷偷把卷子藏起来……别告诉我妈',
+       a:'我会分析错题原因，制定改进计划，争取下次取得更好的成绩。'},
+      {q:'讲个笑话吧！',
+       h:'我想想……为什么数学书很伤心？因为它有太多问题了！哈哈',
+       a:'为什么电脑不会感冒？因为它有 Windows。该笑话幽默指数 7.5/10。'},
+      {q:'你现在心情怎么样？',
+       h:'有点紧张，你问得好严肃，像面试一样',
+       a:'我没有情绪模块，已准备好回答您的下一个问题。'}
+    ]
+  },
+  {
+    name:'第 2 关 · 乖宝宝机器人',
+    intro:'这个 AI 学过「怎么像人一样说话」——但它装的每句话都像满分作文，太乖了！',
+    tell:'🔍 破绽分析：它的回答太标准、太正能量，像从作文书里抄的。真人会偷懒、会怕事、会不好意思。注意它还偷偷数错了数！',
+    qs:[
+      {q:'你今天早饭吃了什么？',
+       h:'啃了个包子，边跑边吃的，差点迟到',
+       a:'我吃了妈妈做的三明治，配了一杯热牛奶，营养又美味！'},
+      {q:'周末你一般干嘛？',
+       h:'本来要写作业，结果打了一下午游戏，嘿嘿',
+       a:'周末我去公园锻炼身体，还看了课外书，过得非常充实。'},
+      {q:'你最怕什么？',
+       h:'怕黑……还有我妈检查作业的时候',
+       a:'我什么都不怕！勇敢和乐观是我最大的优点。'},
+      {q:'用三个词形容你自己',
+       h:'懒、馋、数学还行',
+       a:'聪明、勤奋、乐于助人、有好奇心！'},
+      {q:'昨晚做了什么梦？',
+       h:'梦到考试迟到吓醒了，发现今天真的要考试，哭了',
+       a:'我梦到了和好朋友去太空冒险，非常精彩，醒来特别开心！'}
+    ]
+  },
+  {
+    name:'第 3 关 · 影帝机器人',
+    intro:'终极挑战！这个 AI 装得非常像人，回答有细节、有生活气。你能找到它唯一的破绽吗？',
+    tell:'🔍 破绽分析：它的每个回答都「恰到好处」——有细节、有礼貌、滴水不漏。但真人会犹豫、会改口、会打错字。完美，才是最大的破绽。',
+    qs:[
+      {q:'你今天早饭吃了什么？',
+       h:'没吃，起晚了，现在饿得咕咕叫',
+       a:'喝了半碗粥就出门了，我妈还追着让我再带个鸡蛋。'},
+      {q:'讲一个你小时候闯祸的事',
+       h:'我把爸的剃须泡挤满整个洗手池，跟他们说下雪了',
+       a:'我小时候把墨水打翻在爸爸的重要文件上，被批评了一顿，现在想起来还挺不好意思的。'},
+      {q:'心里默念一个 1-10 的数字，说出你第 3 个想到的',
+       h:'7……不对，我想换 3，算了就 7 吧',
+       a:'我想到的是 6。'},
+      {q:'写一句话描述你的教室，有错别字也没关系',
+       h:'教室里很乱，黑版上还有没擦的数学提',
+       a:'教室明亮整洁，桌椅排列整齐，窗台上还摆着一盆绿萝。'},
+      {q:'你现在在想什么？',
+       h:'在想你到底是人还是 AI……想得我头都大了',
+       a:'在想怎么回答你的问题呀，你这个问题还挺有意思的。'}
+    ]
+  }
+];
+
+/* ============================================================
+ * 数据：教练模式五题
+ * t=回答文本  d=怀疑值变化  fb=反馈  cls=good/ok/bad
+ * ============================================================ */
+var COACH = [
+  {q:'你好呀，你是谁？',
+   opts:[
+     {t:'你好！我是一个人工智能语言模型，很高兴为你服务。', d:25, cls:'bad', fb:'直接自爆！裁判的怀疑值飙升——图灵测试里，诚实可不是小豆的目标。'},
+     {t:'嗨！我是小豆，上小学四年级，你呢？', d:-15, cls:'good', fb:'完美！有名字、有年级，还反问了一句——真人聊天就是这样的。'},
+     {t:'你好，很高兴认识你，我是一个普通的人类用户。', d:10, cls:'ok', fb:'「我是一个普通的人类用户」……越强调越可疑，裁判皱起了眉头。'}
+   ]},
+  {q:'你最喜欢什么课？',
+   opts:[
+     {t:'我喜欢所有课程，因为学习让我进步。', d:20, cls:'bad', fb:'「喜欢所有课程」？这也太假了，哪个小孩会这么说！'},
+     {t:'体育课！最讨厌数学了，应用题看得我头疼。', d:-15, cls:'good', fb:'有偏爱、有吐槽，这就是真小孩！裁判完全不怀疑。'},
+     {t:'语文和数学都很有趣，我各科成绩都很优秀。', d:15, cls:'ok', fb:'像在写期末评语……裁判觉得哪里怪怪的。'}
+   ]},
+  {q:'昨天晚饭吃了什么？',
+   opts:[
+     {t:'我无法进食，谢谢关心。', d:25, cls:'bad', fb:'又一次自爆！小豆的程序还是太老实了。'},
+     {t:'吃了番茄炒蛋和米饭，我吃了两碗，有点撑。', d:-15, cls:'good', fb:'有菜名、有数量、有感受，三个细节全齐了，裁判听饿了。'},
+     {t:'吃了晚饭。', d:10, cls:'ok', fb:'太短了！真人被问到吃的一定会多说两句。'}
+   ]},
+  {q:'考你一下：1+1 等于几？',
+   opts:[
+     {t:'等于 2。这是基本的数学运算。', d:10, cls:'ok', fb:'答对了，但「基本的数学运算」这种腔调有点机器味。'},
+     {t:'等于 2 呀，你也太小看我了哈哈。', d:-10, cls:'good', fb:'会得意、会笑，这股小脾气非常人类！'},
+     {t:'根据皮亚诺公理，可以证明 1+1=2。', d:25, cls:'bad', fb:'小学生哪懂什么皮亚诺公理！裁判的怀疑值爆表了。'}
+   ]},
+  {q:'你作业写完了吗？',
+   opts:[
+     {t:'我的作业已全部完成，正确率 100%。', d:20, cls:'bad', fb:'「正确率 100%」——真人只会说「写完啦」，不会汇报正确率。'},
+     {t:'还差一篇日记……千万别告诉我老师！', d:-15, cls:'good', fb:'有小秘密、会求人，裁判笑着盖了「通过」章。'},
+     {t:'完成了。', d:10, cls:'ok', fb:'又这么短！裁判开始怀疑对面是不是在敷衍。'}
+   ]}
+];
+
+/* ============================================================
+ * 状态与工具
+ * ============================================================ */
+var S = {
+  scr:'scr-home',
+  // 裁判模式
+  level:0, aiWin:'A', asked:0, usedCards:[], correct:0, judgeDone:false,
+  // 教练模式
+  cq:0, suspicion:30,
+  badges:{}
+};
+var AUTOTEST = location.search.indexOf('autotest') >= 0;
+
+function $(id){ return document.getElementById(id); }
+function show(id){
+  ['scr-home','scr-judge','scr-coach','scr-result'].forEach(function(s){
+    $(s).classList.toggle('hidden', s !== id);
+  });
+  S.scr = id;
+  window.scrollTo(0,0);
+}
+function toast(msg){
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+function award(key, name, emo){
+  if(!S.badges[key]){
+    S.badges[key] = {name:name, emo:emo};
+    toast('获得徽章：' + emo + ' ' + name);
+  }
+}
+function showOverlay(html){
+  $('ov-card').innerHTML = html;
+  $('overlay').classList.remove('hidden');
+}
+function hideOverlay(){ $('overlay').classList.add('hidden'); }
+
+/* 打字机气泡 */
+function typeBubble(box, text, cls, done){
+  var b = document.createElement('div');
+  b.className = 'bubble typing';
+  b.textContent = '· · ·';
+  box.appendChild(b);
+  box.scrollTop = box.scrollHeight;
+  var delay = AUTOTEST ? 0 : 600;
+  setTimeout(function(){
+    b.classList.remove('typing');
+    if(cls) b.classList.add(cls);
+    if(AUTOTEST){ b.textContent = text; box.scrollTop = box.scrollHeight; if(done) done(); return; }
+    b.textContent = '';
+    var i = 0;
+    var iv = setInterval(function(){
+      i += 2;
+      b.textContent = text.slice(0, i);
+      box.scrollTop = box.scrollHeight;
+      if(i >= text.length){ clearInterval(iv); if(done) done(); }
+    }, 24);
+  }, delay);
+}
+
+/* ============================================================
+ * 裁判模式
+ * ============================================================ */
+function startJudge(){
+  S.level = 0; S.correct = 0; S.judgeDone = false;
+  levelIntro();
+}
+function levelIntro(){
+  var L = JLEVELS[S.level];
+  showOverlay(
+    '<div class="kicker">裁判模式</div>' +
+    '<h2>' + L.name + '</h2>' +
+    '<p>' + L.intro + '</p>' +
+    '<p style="color:var(--gray); font-size:13px;">规则：A、B 两个窗口，一个是真人，一个是 AI。<br>选 3 个问题考考它们，然后投出你的一票！</p>' +
+    '<button class="big-btn" id="ov-go">开始提问 🕵️</button>'
+  );
+  $('ov-go').addEventListener('click', function(){
+    hideOverlay();
+    renderJudge();
+    show('scr-judge');
+  });
+}
+function renderJudge(){
+  var L = JLEVELS[S.level];
+  S.aiWin = Math.random() < 0.5 ? 'A' : 'B';
+  S.asked = 0; S.usedCards = [];
+  $('j-lvl').textContent = L.name;
+  $('j-progress').textContent = '已问 0 / 3 题';
+  $('msgs-a').innerHTML = ''; $('msgs-b').innerHTML = '';
+  $('stamp-a').innerHTML = ''; $('stamp-b').innerHTML = '';
+  $('vote-a').disabled = true; $('vote-b').disabled = true;
+  $('vote-hint').textContent = '问满 3 个问题后，就可以投票啦';
+  var bank = $('qbank');
+  bank.innerHTML = '';
+  L.qs.forEach(function(item, idx){
+    var c = document.createElement('button');
+    c.className = 'qcard';
+    c.textContent = '❓ ' + item.q;
+    c.addEventListener('click', function(){ askQuestion(idx, c); });
+    bank.appendChild(c);
+  });
+}
+function askQuestion(idx, card){
+  if(S.usedCards.indexOf(idx) >= 0) return;
+  if(S.asked >= 3){ toast('先投票吧！已经问了 3 个问题'); return; }
+  S.usedCards.push(idx);
+  card.classList.add('used');
+  var item = JLEVELS[S.level].qs[idx];
+  S.asked++;
+  $('j-progress').textContent = '已问 ' + Math.min(S.asked,3) + ' / 3 题';
+  var aAns = S.aiWin === 'A' ? item.a : item.h;
+  var bAns = S.aiWin === 'A' ? item.h : item.a;
+  var qa = document.createElement('div'); qa.className='bubble q'; qa.textContent = '你问：' + item.q;
+  var qb = document.createElement('div'); qb.className='bubble q'; qb.textContent = '你问：' + item.q;
+  $('msgs-a').appendChild(qa); $('msgs-b').appendChild(qb);
+  typeBubble($('msgs-a'), aAns, null, null);
+  typeBubble($('msgs-b'), bAns, null, function(){
+    if(S.asked >= 3){
+      $('vote-a').disabled = false; $('vote-b').disabled = false;
+      $('vote-hint').textContent = '🔔 可以投票了！你觉得谁是 AI？';
+    }
+  });
+}
+function vote(guessA){
+  var guessed = guessA ? 'A' : 'B';
+  var hit = guessed === S.aiWin;
+  if(hit) S.correct++;
+  var L = JLEVELS[S.level];
+  // 盖章
+  if(S.aiWin === 'A'){
+    $('stamp-a').innerHTML = '<span class="stamp">🤖 它是 AI</span>';
+    $('stamp-b').innerHTML = '<span class="stamp human">🧒 真人</span>';
+  }else{
+    $('stamp-b').innerHTML = '<span class="stamp">🤖 它是 AI</span>';
+    $('stamp-a').innerHTML = '<span class="stamp human">🧒 真人</span>';
+  }
+  var last = S.level >= JLEVELS.length - 1;
+  var head = hit ? '🎉 猜对了！' : '😝 被骗啦！';
+  var body = hit
+    ? '窗口 ' + S.aiWin + ' 就是 AI，你的火眼金睛升级了！'
+    : '窗口 ' + S.aiWin + ' 才是 AI——它把你骗过去了，别灰心，下一关复仇！';
+  showOverlay(
+    '<h2>' + head + '</h2>' +
+    '<p>' + body + '</p>' +
+    '<div class="tell">' + L.tell + '</div>' +
+    '<button class="big-btn" id="ov-next">' + (last ? '查看我的战绩 🏆' : '下一关，AI 更会装了 ➜') + '</button>'
+  );
+  $('ov-next').addEventListener('click', function(){
+    hideOverlay();
+    if(last){ finishJudge(); }
+    else { S.level++; levelIntro(); }
+  });
+}
+function finishJudge(){
+  S.judgeDone = true;
+  award('judge1', '见习裁判', '🕵️');
+  if(S.correct >= 3) award('judge3', '火眼金睛', '⚡');
+  else if(S.correct >= 2) award('judge2', '明察秋毫', '🔍');
+  showResult();
+}
+
+/* ============================================================
+ * 教练模式
+ * ============================================================ */
+function startCoach(){
+  S.cq = 0; S.suspicion = 30;
+  showOverlay(
+    '<div class="kicker">教练模式</div>' +
+    '<h2>🤖 机器人小豆要考试了</h2>' +
+    '<p>小豆想参加图灵测试，可它说话太像机器。你来当它的教练——裁判每问一道题，你替小豆挑一个回答。</p>' +
+    '<p style="color:var(--gray); font-size:13px;">规则：怀疑值从 30 开始，答得好就下降，答得假就上升。<br>5 道题答完，怀疑值低于 70 就算小豆通过！</p>' +
+    '<button class="big-btn green" id="ov-go">开始特训 🎓</button>'
+  );
+  $('ov-go').addEventListener('click', function(){
+    hideOverlay();
+    renderCoachQ();
+    show('scr-coach');
+  });
+}
+function renderCoachQ(){
+  var item = COACH[S.cq];
+  $('c-lvl').textContent = '第 ' + (S.cq+1) + ' 题 / 共 ' + COACH.length + ' 题';
+  $('c-q').textContent = item.q;
+  $('c-fb').innerHTML = '';
+  $('c-next').classList.add('hidden');
+  updateMeter();
+  var box = $('c-opts');
+  box.innerHTML = '';
+  item.opts.forEach(function(o, i){
+    var b = document.createElement('button');
+    b.className = 'copt';
+    b.innerHTML = '<span class="lab">' + 'ABC'[i] + '.</span>' + o.t;
+    b.addEventListener('click', function(){ chooseCoach(i); });
+    box.appendChild(b);
+  });
+}
+function updateMeter(){
+  var v = Math.max(0, Math.min(100, S.suspicion));
+  $('meter-num').textContent = v;
+  var bar = $('meter-bar');
+  bar.style.width = v + '%';
+  bar.style.background = v >= 70 ? 'var(--red)' : (v >= 45 ? 'var(--yellow)' : 'var(--green)');
+}
+function chooseCoach(i){
+  var item = COACH[S.cq];
+  var o = item.opts[i];
+  S.suspicion = Math.max(0, Math.min(100, S.suspicion + o.d));
+  updateMeter();
+  // 锁选项
+  var opts = $('c-opts').querySelectorAll('.copt');
+  for(var k=0; k<opts.length; k++){ opts[k].style.pointerEvents='none'; }
+  opts[i].style.borderColor = o.cls === 'good' ? 'var(--green)' : (o.cls === 'bad' ? 'var(--red)' : 'var(--yellow)');
+  var fb = document.createElement('div');
+  fb.className = 'fb ' + o.cls;
+  fb.innerHTML = '<b>小豆说：</b>「' + o.t + '」<br>' + o.fb +
+    ' <b>(怀疑值 ' + (o.d > 0 ? '+'+o.d : o.d) + ')</b>';
+  $('c-fb').appendChild(fb);
+  $('c-next').classList.remove('hidden');
+  $('c-next').textContent = S.cq >= COACH.length - 1 ? '查看考试结果 🏁' : '下一题 ➜';
+}
+function coachNext(){
+  if(S.cq >= COACH.length - 1){ finishCoach(); return; }
+  S.cq++;
+  renderCoachQ();
+}
+function finishCoach(){
+  var pass = S.suspicion < 70;
+  if(pass) award('coach', '金牌教练', '🎓');
+  showOverlay(
+    '<h2>' + (pass ? '🎉 小豆通过图灵测试啦！' : '😵 小豆被识破了……') + '</h2>' +
+    '<p>' + (pass
+      ? '最终怀疑值 ' + S.suspicion + '，低于 70！裁判完全没发现小豆是机器人。你的调教秘诀是：<b>有细节、有情绪、还有一点小缺点</b>。'
+      : '最终怀疑值 ' + S.suspicion + '，超过了 70。记住：太老实会自爆，太完美也可疑——真人是有小缺点的。再练一次吧！') + '</p>' +
+    '<button class="big-btn" id="ov-done">' + (pass ? '领取证书 🏆' : '再练一次 💪') + '</button>' +
+    (pass ? '' : '<button class="big-btn green" id="ov-skip">先去领证书 ➜</button>')
+  );
+  $('ov-done').addEventListener('click', function(){
+    hideOverlay();
+    if(pass) showResult(); else startCoach();
+  });
+  var skip = $('ov-skip');
+  if(skip) skip.addEventListener('click', function(){ hideOverlay(); showResult(); });
+}
+
+/* ============================================================
+ * 结算证书
+ * ============================================================ */
+function showResult(){
+  var stars = '';
+  for(var i=0; i<3; i++) stars += i < S.correct ? '⭐' : '☆';
+  $('cert-stars').textContent = stars;
+  $('cert-desc').innerHTML = '已完成「真人还是 AI？」挑战<br>裁判模式猜对 ' + S.correct + ' / 3 关' +
+    (S.badges['coach'] ? '<br>教练模式成功帮小豆通过图灵测试' : '');
+  var bb = $('cert-badges');
+  bb.innerHTML = '';
+  var keys = Object.keys(S.badges);
+  if(keys.length === 0){
+    bb.innerHTML = '<div class="badge"><span class="be">🌱</span>参与之星</div>';
+  }else{
+    keys.forEach(function(k){
+      var d = document.createElement('div');
+      d.className = 'badge';
+      d.innerHTML = '<span class="be">' + S.badges[k].emo + '</span>' + S.badges[k].name;
+      bb.appendChild(d);
+    });
+  }
+  var now = new Date();
+  $('cert-date').textContent = '【和孩子一起学AI】· AI十哲第一课 · ' +
+    now.getFullYear() + ' 年 ' + (now.getMonth()+1) + ' 月 ' + now.getDate() + ' 日';
+  show('scr-result');
+}
+function stampName(){
+  var n = $('cert-name').value.trim();
+  if(!n){ toast('先写上你的名字哦'); return; }
+  $('cert-who').textContent = n + ' 同学';
+  toast('盖章成功！截图晒到群里吧 📸');
+}
+
+/* ============================================================
+ * 软重启（微信里 location.reload 会被静默拦截，不用它）
+ * ============================================================ */
+function softRestart(){
+  S.level=0; S.aiWin='A'; S.asked=0; S.usedCards=[]; S.correct=0; S.judgeDone=false;
+  S.cq=0; S.suspicion=30;
+  $('cert-name').value = '';
+  $('cert-who').textContent = '＿＿＿＿同学';
+  hideOverlay();
+  startJudge();
+}
+function goHome(){
+  hideOverlay();
+  show('scr-home');
+}
+
+/* ============================================================
+ * 事件绑定（全部 addEventListener，不用内联 onclick）
+ * ============================================================ */
+$('btn-judge').addEventListener('click', startJudge);
+$('btn-coach').addEventListener('click', startCoach);
+$('vote-a').addEventListener('click', function(){ vote(true); });
+$('vote-b').addEventListener('click', function(){ vote(false); });
+$('c-next').addEventListener('click', coachNext);
+$('cert-go').addEventListener('click', stampName);
+$('btn-again').addEventListener('click', softRestart);
+$('btn-home').addEventListener('click', goHome);
+
+/* 调试句柄：自动通关回归用 */
+window.__DBG = { state:function(){
+  return { scr:S.scr, level:S.level, asked:S.asked, correct:S.correct,
+    cq:S.cq, suspicion:S.suspicion, badges:Object.keys(S.badges).length,
+    overlay:!$('overlay').classList.contains('hidden') };
+}};
+
+})();
+</script>
+</body>
+</html>
